@@ -50,7 +50,7 @@ public class Main {
                     .create(image);
             String json = template.serialize();
 
-            FileWriter fileWriter = new FileWriter("fingerTemplate.json");
+            FileWriter fileWriter = new FileWriter("ft.json");
             fileWriter.write(json);
             fileWriter.flush();
 

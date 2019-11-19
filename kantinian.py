@@ -1,5 +1,5 @@
 # desktop
-import os, sys, glob, serial, threading, atexit
+import os, sys, glob, serial, threading, atexit, time
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
@@ -13,6 +13,7 @@ from subprocess import STDOUT, PIPE
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as cond
 from selenium.common.exceptions import UnexpectedAlertPresentException
@@ -41,10 +42,42 @@ class Dashboard(QMainWindow):
     imgFinger = None
     scannedImageLocation = None
     downloadImageThread = None
-    driver = webdriver.Firefox(executable_path = os.getcwd() + '/geckodriver')
+    driver = None
+
+    def openBrowser(self, new = True):
+        # firefox-ESR
+        # driver = webdriver.Firefox(executable_path = os.getcwd() + '/geckodriver')
+        
+        # Chromium-browser ; install chromedriver dulu "sudo apt install chromium-chromedriver"
+        options = webdriver.ChromeOptions()
+        options.add_argument('--ignore-certificate-errors')
+        options.add_argument("--test-type")
+        options.binary_location = "/usr/bin/chromium-browser"
+        # self.driver = webdriver.Chrome(chrome_options=options)
+        self.driver = webdriver.Chrome(executable_path='/usr/bin/chromedriver')
+        
+        # go to kantinian login page
+        self.driver.maximize_window()
+        if new:
+            self.driver.get('http://kantinian.id/login/login.php') 
+        
+        # zoom chrome
+        self.driver.execute_script("document.body.style.zoom='200%'")
+        # zoom firefox-ESR not fixed yet
+        # ActionChains(self.driver).key_down(Keys.CONTROL).send_keys(Keys.ADD).key_up(Keys.CONTROL).perform()
+        # ActionChains(self.driver).key_down(Keys.CONTROL).send_keys(Keys.ADD).key_up(Keys.CONTROL).perform()
+        # ActionChains(self.driver).key_down(Keys.CONTROL).send_keys(Keys.ADD).key_up(Keys.CONTROL).perform()
+        # ActionChains(self.driver).key_down(Keys.CONTROL).send_keys(Keys.ADD).key_up(Keys.CONTROL).perform()
+        # ActionChains(self.driver).key_down(Keys.CONTROL).send_keys('a').key_up(Keys.CONTROL).perform()
+        # self.driver.find_element_by_tag_name("html").send_keys(Keys.CONTROL + 't')
+        # self.driver.find_element_by_tag_name("html").send_keys(Keys.CONTROL + '+')
+        # self.driver.find_element_by_tag_name("html").send_keys(Keys.CONTROL + '+')
+        # To zoom in
+        # self.driver.execute_script("document.body.style.transform='scale(2.5)'")
     
     def __init__(self, parent=None):
         super(Dashboard, self).__init__()
+        self.openBrowser()
         
         self.createImageBox()
         self.createConnectionBox()
@@ -148,11 +181,24 @@ class Dashboard(QMainWindow):
             self.imgFinger = QPixmap(self.scannedImageLocation)
             self.imgFinger = self.imgFinger.scaledToHeight(100)
             self.imageBox.setPixmap(self.imgFinger)
-            self.execute_java('img2json','fingerprint.bmp')
+            result = self.execute_java('img2json','fingerprint.bmp')
             self.log.insertItem(0, "json file has created")
+            if(len(result) <= 500):
+                self.log.insertItem(0, "Please retry, finger not valid")
+                msg = QMessageBox()
+                msg.setIcon(QMessageBox.Information)
+                msg.setText("Please retry, finger not valid")
+                msg.setWindowTitle("Kantinian alert")
+                msg.setDetailedText("The details are as follows:")
+                msg.exec()
+                return
 
             if (self.driver == None):            
-                self.driver = webdriver.Firefox(executable_path = os.getcwd() + '/geckodriver')
+                self.openBrowser(False)
+                # self.driver = webdriver.Firefox(executable_path = os.getcwd() + '/geckodriver')
+                # To zoom in
+                # driver.execute_script("document.body.style.transform='scale(2.5)'")
+                # driver.execute_script("document.body.style.zoom='200%'")
 
             self.driver.get("http://kantinian.id/form/tambahcustomer.php?kartu")
             self.driver.implicitly_wait(5)
@@ -160,7 +206,7 @@ class Dashboard(QMainWindow):
             if(self.driver.current_url == "http://kantinian.id/form/tambahcustomer.php?kartu"):
                 elem = self.driver.find_element_by_id("fileupload")
                 elem.clear()
-                elem.send_keys(os.getcwd() + "/fingerTemplate.json")
+                elem.send_keys(os.getcwd() + "/ft.json")
 
         except:
             self.log.insertItem(0, "Can't connect, check your connection")
@@ -170,9 +216,13 @@ class Dashboard(QMainWindow):
             self.downloadImageThread.do_run = False
 
         if (self.driver == None):            
-            self.driver = webdriver.Firefox(executable_path = os.getcwd() + '/geckodriver')
-            self.driver.implicitly_wait(5)
-            self.driver.maximize_window()
+            self.openBrowser(False)
+            # self.driver = webdriver.Firefox(executable_path = os.getcwd() + '/geckodriver')
+            # self.driver.implicitly_wait(5)
+            # self.driver.maximize_window()
+            # self.driver.execute_script("document.body.style.transform='scale(2.5)'")
+            # driver.execute_script("document.body.style.zoom='200%'")
+            
 
         self.log.insertItem(0, "Thread started")
         self.downloadImageThread = threading.Thread(name = 'download Image Thread', target=downloadImage, args = (self.downloadImageCallback, str(self.comboBox.currentText())))
@@ -199,7 +249,7 @@ class Dashboard(QMainWindow):
             except (OSError, serial.SerialException):
                 pass
             
-    def compile_java():
+    def compile_java(self):
         subprocess.check_call(['javac','-cp','.:./libjava/*', 'com/company/Main.java'])
 
     def execute_java(self, *args):
@@ -215,25 +265,27 @@ class Dashboard(QMainWindow):
         self.imgFinger = self.imgFinger.scaledToHeight(100)
         self.imageBox.setPixmap(self.imgFinger)
         result = self.execute_java('findMatch','fingerprint.bmp')
-        idx1 = result.index("\"")
-        idx2 = result.index("\"", idx1+1)
-        userid = result[idx1+1:idx2]
-        print("userid: " + userid)
 
-        if(userid.__contains__('null')):
+        if(result.__contains__('null')):
             self.log.insertItem(0, "User not found or try again")
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Information)
             msg.setText("User not found or try again")
-            msg.setInformativeText("This is additional information")
             msg.setWindowTitle("Kantinian alert")
             msg.setDetailedText("The details are as follows:")
             msg.exec()
         else:
-            if (self.driver == None):            
-                self.driver = webdriver.Firefox(executable_path = os.getcwd() + '/geckodriver')
-                self.driver.implicitly_wait(5)
-                self.driver.maximize_window()
+            if (self.driver == None):
+                self.openBrowser(False)            
+                # self.driver = webdriver.Firefox(executable_path = os.getcwd() + '/geckodriver')
+                # self.driver.implicitly_wait(5)
+                # self.driver.maximize_window()
+                # self.driver.execute_script("document.body.style.zoom='200%'")
+
+            idx1 = result.index("\"")
+            idx2 = result.index("\"", idx1+1)
+            userid = result[idx1+1:idx2]
+            print("userid: " + userid)
 
             if(self.driver.current_url.__contains__('http://kantinian.id/laman/bayar.php')):
                 elem = self.driver.find_element_by_id("idcustomer")
