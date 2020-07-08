@@ -26,8 +26,8 @@ class Dashboard(QMainWindow):
     scannedImageLocation = None
     driver = None
 
-    url = 'http://192.168.43.193/absensitelkom/finger.php'
-    urlAbsen = 'http://192.168.43.193/absensitelkom/api/absen.php?id='
+    url = 'http://13.67.75.133/absensi/finger.php'
+    urlAbsen = 'http://13.67.75.133/absensi/api/absen.php?id='
 
     def __init__(self, parent=None):
         super(Dashboard, self).__init__()

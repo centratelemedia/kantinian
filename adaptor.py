@@ -13,7 +13,7 @@ from pyfingerprint.pyfingerprint import PyFingerprint
 
 port = '/dev/ttyS0'
 minQ = 100
-urlServer = 'http://192.168.43.193/absensitelkom/api/finger.php'
+urlServer = 'http://13.67.75.133/absensi/api/finger.php'
 
 try:
     f = PyFingerprint(port, 57600, 0xFFFFFFFF, 0x00000000)
