@@ -3,7 +3,7 @@ import os, sys, glob, serial, threading, atexit, time
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
-import downloadimage
+import adaptor
 
 # java
 import os.path, subprocess
